@@ -41,10 +41,18 @@ class HomeworkInstance(models.Model):
 
     file = models.FileField(upload_to="done_homeworks/", null=True)
     is_done = models.BooleanField(default=False)
-    mark = models.SmallIntegerField(null=True)
+    # mark = models.SmallIntegerField(null=True)
 
     def __str__(self):
         return f"Homework: {self.homework.title} by {self.student}"
+
+
+class HomeworkInstanceMark(models.Model):
+    homework_instance = models.OneToOneField(HomeworkInstance, on_delete=models.CASCADE)
+    mark = models.SmallIntegerField(null=True)
+
+    def __str__(self):
+        return f"{self.homework_instance} : {self.mark}"
 
 
 class HomeworkInstanceComment(models.Model):

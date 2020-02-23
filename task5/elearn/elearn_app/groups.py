@@ -24,6 +24,12 @@ if created:
         Permission.objects.get(name="Can change homework instance"),
         # Permission.objects.get(name="Can delete homework instance"),
 
+        Permission.objects.get(name="Can add homework instance mark"),
+        Permission.objects.get(name="Can view homework instance mark"),
+        Permission.objects.get(name="Can change homework instance mark"),
+        # Permission.objects.get(name="Can delete homework instance mark"),
+
+
         Permission.objects.get(name="Can add homework instance comment"),
         Permission.objects.get(name="Can view homework instance comment"),
         # Permission.objects.get(name="Can change homework instance comment"),
@@ -53,6 +59,11 @@ if created:
         Permission.objects.get(name="Can view homework instance"),
         Permission.objects.get(name="Can change homework instance"),
         # Permission.objects.get(name="Can delete homework instance"),
+
+        # Permission.objects.get(name="Can add homework instance mark"),
+        Permission.objects.get(name="Can view homework instance mark"),
+        # Permission.objects.get(name="Can change homework instance mark"),
+        # Permission.objects.get(name="Can delete homework instance mark"),
 
         Permission.objects.get(name="Can add homework instance comment"),
         Permission.objects.get(name="Can view homework instance comment"),
