@@ -2,11 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-
-
-
 class Course(models.Model):
-    title = models.CharField(max_length=128, null=False)
+    title = models.CharField(max_length=128, null=False, unique=True)
     teachers = models.ManyToManyField(User, related_name="course_teachers")
     students = models.ManyToManyField(User, related_name="course_students", blank=True)
 
@@ -15,6 +12,9 @@ class Course(models.Model):
 
 
 class Lecture(models.Model):
+    class Meta:
+        unique_together = (("course_id", "title"),)
+
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     title = models.CharField(max_length=128, null=False)
     file = models.FileField(upload_to="lectures/", null=False)
@@ -58,11 +58,14 @@ class HomeworkInstanceMark(models.Model):
 class HomeworkInstanceComment(models.Model):
     homework_instance = models.ForeignKey(HomeworkInstance, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    datetime = models.DateTimeField(auto_now_add=True)
+    created_on = models.DateTimeField(auto_now_add=True)
     body = models.TextField(null=False, blank=False)
 
+    class Meta:
+        ordering = ["created_on"]
+
     def __str__(self):
-        return f"{self.author}: {self.body}"
+        return f"Comment: {self.body} by {self.author}"
 
 
 from . import groups  # workaround

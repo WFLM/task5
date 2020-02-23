@@ -1,12 +1,21 @@
 from django.contrib import admin
 
-
-from .models import Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment
+from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceMark, HomeworkInstanceComment
+from .forms import CourseForm
 
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    pass
+    form = CourseForm
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "teachers":
+            kwargs["queryset"] = User.objects.filter(groups__name='Teachers')
+
+        elif db_field.name == "students":
+            kwargs["queryset"] = User.objects.filter(groups__name='Students')
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
 
 @admin.register(Lecture)
@@ -19,11 +28,19 @@ class HomeworkAdmin(admin.ModelAdmin):
     pass
 
 
+# @admin.register(HomeworkInstanceMark)
+class HomeworkInstanceMarkAdmin(admin.TabularInline):
+    model = HomeworkInstanceMark
+    fields = (
+        "mark",
+    )
+
+
+# @admin.register(HomeworkInstanceComment)
+class HomeworkInstanceCommentsAdmin(admin.TabularInline):
+    model = HomeworkInstanceComment
+
+
 @admin.register(HomeworkInstance)
 class HomeworkInstanceAdmin(admin.ModelAdmin):
-    pass
-
-
-@admin.register(HomeworkInstanceComment)
-class HomeworkInstanceCommentsAdmin(admin.ModelAdmin):
-    pass
+    inlines = (HomeworkInstanceMarkAdmin, HomeworkInstanceCommentsAdmin)
