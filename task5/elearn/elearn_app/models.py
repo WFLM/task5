@@ -55,3 +55,6 @@ class HomeworkInstanceComment(models.Model):
 
     def __str__(self):
         return f"{self.author}: {self.body}"
+
+
+from . import groups  # workaround
