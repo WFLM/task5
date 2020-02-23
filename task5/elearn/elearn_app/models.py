@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+
+
+
 class Course(models.Model):
     title = models.CharField(max_length=128, null=False)
     teachers = models.ManyToManyField(User, related_name="course_teachers")
@@ -47,7 +50,7 @@ class HomeworkInstance(models.Model):
 class HomeworkInstanceComment(models.Model):
     homework_instance = models.ForeignKey(HomeworkInstance, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    datetime = models.DateTimeField(auto_now=True)
+    datetime = models.DateTimeField(auto_now_add=True)
     body = models.TextField(null=False, blank=False)
 
     def __str__(self):
