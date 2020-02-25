@@ -1,5 +1,6 @@
 from django.contrib.auth.models import Group, Permission
 
+# data migration -> to migrations
 
 teachers, created = Group.objects.get_or_create(name="Teachers")
 if created:

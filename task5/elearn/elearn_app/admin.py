@@ -4,6 +4,20 @@ from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkI
 from .forms import CourseForm
 
 
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = (
+        "email",
+        "first_name",
+        "last_name",
+        "date_joined",
+        "user_groups",
+    )
+
+    def user_groups(self, obj):
+        return ','.join([g.name for g in obj.groups.all()]) if obj.groups.count() else ''
+
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
