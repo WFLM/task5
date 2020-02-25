@@ -2,7 +2,8 @@ import jwt
 from django.contrib.auth import user_logged_in
 from rest_framework_jwt.serializers import jwt_payload_handler
 
-from task5.elearn.elearn import settings
+from django.conf import settings
+
 from .models import User
 from .serializers import UserSerializer
 

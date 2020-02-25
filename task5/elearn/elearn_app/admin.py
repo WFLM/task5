@@ -11,7 +11,7 @@ class UserAdmin(admin.ModelAdmin):
         "first_name",
         "last_name",
         "date_joined",
-        "user_groups",
+        "user_groups"
     )
 
     def user_groups(self, obj):
