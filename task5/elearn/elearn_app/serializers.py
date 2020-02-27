@@ -14,17 +14,19 @@ class UserSerializer(serializers.Serializer):
     group = serializers.CharField(write_only=True, required=True)
 
     user_group = serializers.SerializerMethodField()   # To get "group" in serializer.data then.
-    def get_user_group(self, obj):
-        return self.validated_data["group"]
 
     _GROUP_NAMES = tuple(str(group) for group in Group.objects.all())
     def validate_group(self, value):
+
         if value == "superusers":
             raise serializers.ValidationError(f"Superuser cannot be created this way.")
         elif value not in self._GROUP_NAMES:
             raise serializers.ValidationError(f"Group {value} doesn't exist.")
         else:
             return value
+
+    def get_user_group(self, obj):
+        return str(obj.groups.all()[0])
 
     def create(self, validated_data):
         user = User(
