@@ -1,7 +1,16 @@
-from django.urls import path
-from .views import CreateUserAPIView, AuthenticateUserAPIView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from .views import CreateUserAPIView, LoginView, LogoutView
+
+
+router = DefaultRouter()
+router.register('login', LoginView, basename='login')
+
 
 urlpatterns = [
-    path("create/", CreateUserAPIView.as_view(), name="elearn_app"),
-    path("obtain_token/", AuthenticateUserAPIView.as_view())
+    path("", include(router.urls)),
+    path("register/", CreateUserAPIView.as_view(), name="register"),
+    path("account/logout/", LogoutView.as_view(), name="logout")
 ]
+
