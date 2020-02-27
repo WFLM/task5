@@ -21,7 +21,7 @@ class CourseForm(ModelForm):
     def clean_teachers(self):
         users = self.cleaned_data["teachers"]
         users_count = users.count()
-        teachers = users.filter(groups__name='Teachers')
+        teachers = users.filter(groups__name='teachers')
         teachers_count = teachers.count()
 
         if users_count == teachers_count:
@@ -32,7 +32,7 @@ class CourseForm(ModelForm):
     def clean_students(self):
         users = self.cleaned_data["students"]
         users_count = users.count()
-        students = users.filter(groups__name="Students")
+        students = users.filter(groups__name="students")
         students_count = students.count()
 
         if users_count == students_count:

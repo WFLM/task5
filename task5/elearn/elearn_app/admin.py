@@ -24,10 +24,10 @@ class CourseAdmin(admin.ModelAdmin):
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "teachers":
-            kwargs["queryset"] = User.objects.filter(groups__name='Teachers')
+            kwargs["queryset"] = User.objects.filter(groups__name='teachers')
 
         elif db_field.name == "students":
-            kwargs["queryset"] = User.objects.filter(groups__name='Students')
+            kwargs["queryset"] = User.objects.filter(groups__name='students')
 
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
