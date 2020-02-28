@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from .models import User, Group, Course
+from .models import User, Group, Course, Lecture
 
 
 class UserSerializer(serializers.Serializer):
@@ -99,3 +99,43 @@ class CourseSerializer(serializers.ModelSerializer):
         course.teachers.set(teachers)
         course.students.set(students)
         return course
+
+
+class LectureSerializer(serializers.ModelSerializer):
+    course_name = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = Lecture
+        fields = [
+            'id', 'title', 'file', 'course_id',
+            'course_name'
+        ]
+
+        extra_kwargs = {
+            "id": {"required": False},
+            "course_id": {"required": False},
+            "course_name": {"required": False, "write_only": True},
+            "title": {"validators": [UniqueValidator(queryset=Lecture.objects.all())]}
+        }
+
+    def validate_course_name(self, value):
+        if Course.objects.filter(title=value).exists():
+            return value  # str
+        else:
+            raise serializers.ValidationError(f"Course {value} doesn't exist.")
+
+    def create(self, validated_data):
+        if 'course_id' in validated_data:
+            course_id = validated_data['course_id']
+        elif 'course_name' in validated_data:
+            course_id = Course.objects.get(title=validated_data['course_name']).id
+        else:
+            raise
+
+        lecture = Lecture(
+            title=validated_data['title'],
+            file=validated_data['file'],
+            course_id=course_id
+        )
+        lecture.save()
+        return lecture

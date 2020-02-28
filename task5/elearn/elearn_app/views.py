@@ -7,8 +7,8 @@ from rest_framework.authentication import TokenAuthentication
 
 from django.conf import settings
 
-from .models import User, Course
-from .serializers import UserSerializer, CourseSerializer
+from .models import User, Course, Lecture
+from .serializers import UserSerializer, CourseSerializer, LectureSerializer
 
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
@@ -67,7 +67,8 @@ class CourseViewSet(ModelViewSet):
     serializer_class = CourseSerializer
 
     def get_permissions(self):
-        permission_classes = [IsSuperuser]
+        # permission_classes = [IsSuperuser]
+        permission_classes = []
         if self.action == 'create':
             permission_classes += [IsTeacher]
         elif self.action == 'list':
@@ -97,3 +98,36 @@ class CourseViewSet(ModelViewSet):
     #     print(queryset)
     #     print(request.user)
     #     return Response(serializer)
+
+
+class LectureViewSet(ModelViewSet):
+
+    authentication_classes = [TokenAuthentication]
+    queryset = Lecture.objects.all()
+    serializer_class = LectureSerializer
+    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
+        permission_classes = []
+        if self.action == 'create':
+            permission_classes += [IsTeacher]
+        elif self.action == 'list':
+            permission_classes += [IsTeacher | IsStudent]
+        elif self.action == 'retrieve':
+            permission_classes += [IsTeacher | IsStudent]
+        elif self.action in {'update', 'partial_update'}:
+            permission_classes += [IsTeacher]
+        elif self.action == 'destroy':
+            permission_classes += [IsTeacher]
+
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name="superusers").exists():
+            return Lecture.objects.all()
+        elif user.groups.filter(name="teachers").exists():
+            return Lecture.objects.filter(course__teachers__email=user)
+        elif user.groups.filter(name="students").exists():
+            return Lecture.objects.filter(course__students__email=user)
