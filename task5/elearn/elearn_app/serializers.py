@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from .models import User, Group, Course, Lecture
+from .models import User, Group, Course, Lecture, Homework
 
 
 class UserSerializer(serializers.Serializer):
@@ -114,7 +114,7 @@ class LectureSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "id": {"required": False},
             "course_id": {"required": False},
-            "course_name": {"required": False, "write_only": True},
+            # "course_name": {"required": False, "write_only": True},
             "title": {"validators": [UniqueValidator(queryset=Lecture.objects.all())]}
         }
 
@@ -139,3 +139,43 @@ class LectureSerializer(serializers.ModelSerializer):
         )
         lecture.save()
         return lecture
+
+
+class HomeworkSerializer(serializers.ModelSerializer):
+    lecture_name = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = Homework
+        fields = [
+            'id', 'title', 'text', 'lecture_id',
+            'lecture_name'
+        ]
+
+        extra_kwargs = {
+            "id": {"required": False},
+            "lecture_id": {"required": False},
+            # "lecture_name": {"required": False, "write_only": True},
+            "title": {"validators": [UniqueValidator(queryset=Homework.objects.all())]}
+        }
+
+    def validate_lecture_name(self, value):
+        if Lecture.objects.filter(title=value).exists():
+            return value  # str
+        else:
+            raise serializers.ValidationError(f"Lecture {value} doesn't exist.")
+
+    def create(self, validated_data):
+        if 'lecture_id' in validated_data:
+            lecture_id = validated_data['lecture_id']
+        elif 'lecture_name' in validated_data:
+            lecture_id = Lecture.objects.get(title=validated_data['lecture_name']).id
+        else:
+            raise
+
+        homework = Homework(
+            title=validated_data['title'],
+            text=validated_data['text'],
+            lecture_id=lecture_id
+        )
+        homework.save()
+        return homework

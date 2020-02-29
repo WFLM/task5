@@ -6,15 +6,17 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-from .views import CreateUserAPIView, LoginView, LogoutView, UserViewSet, CourseViewSet, LectureViewSet
+from .views import CreateUserAPIView, \
+    LoginView, LogoutView, UserViewSet, \
+    CourseViewSet, LectureViewSet, HomeworkViewSet
 
 
 router = DefaultRouter()
 router.register('login', LoginView, basename='login')
 router.register('users', UserViewSet, basename='user')
-router.register('course', CourseViewSet, basename="course")
-router.register('lecture', LectureViewSet, basename="lecture")
-
+router.register('course', CourseViewSet, basename='course')
+router.register('lecture', LectureViewSet, basename='lecture')
+router.register('homework', HomeworkViewSet, basename='homework')
 
 schema_view = get_schema_view(
    openapi.Info(
