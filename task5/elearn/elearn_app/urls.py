@@ -1,16 +1,41 @@
+from django.conf.urls import url
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .views import CreateUserAPIView, LoginView, LogoutView, UserViewSet, CourseViewSet
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+from .views import CreateUserAPIView, LoginView, LogoutView, UserViewSet, CourseViewSet, LectureViewSet
+
 
 router = DefaultRouter()
 router.register('login', LoginView, basename='login')
-router.register('users', UserViewSet, basename='user-list')
-router.register('course', CourseViewSet, basename="course-list")
+router.register('users', UserViewSet, basename='user')
+router.register('course', CourseViewSet, basename="course")
+router.register('lecture', LectureViewSet, basename="lecture")
+
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Snippets API",
+      default_version='v1',
+      description="Test description",
+      terms_of_service="https://www.google.com/policies/terms/",
+      contact=openapi.Contact(email="contact@snippets.local"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path("", include(router.urls)),
     path("register/", CreateUserAPIView.as_view(), name="register"),
-    path("account/logout/", LogoutView.as_view(), name="logout")
+    path("account/logout/", LogoutView.as_view(), name="logout"),
+
+    url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
 
