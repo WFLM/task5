@@ -7,8 +7,9 @@ from rest_framework.authentication import TokenAuthentication
 
 from django.conf import settings
 
-from .models import User, Course, Lecture, Homework
-from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer
+from .models import User, Course, Lecture, Homework, HomeworkInstance
+from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
+    HomeworkInstanceSerializer
 
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
@@ -105,7 +106,7 @@ class LectureViewSet(ModelViewSet):
     authentication_classes = [TokenAuthentication]
     # queryset = Lecture.objects.all()
     serializer_class = LectureSerializer
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
 
     def get_permissions(self):
         # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
@@ -138,7 +139,7 @@ class HomeworkViewSet(ModelViewSet):
     authentication_classes = [TokenAuthentication]
     # queryset = Homework.objects.all()
     serializer_class = HomeworkSerializer
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
 
     def get_permissions(self):
         # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
@@ -164,3 +165,35 @@ class HomeworkViewSet(ModelViewSet):
             return Homework.objects.filter(lecture__course__teachers__email=user)
         elif user.groups.filter(name="students").exists():
             return Homework.objects.filter(lecture__course__students__email=user)
+
+
+class HomeworkInstanceViewSet(ModelViewSet):
+    authentication_classes = [TokenAuthentication]
+    # queryset = HomeworkInstance.objects.all()
+    serializer_class = HomeworkInstanceSerializer
+    # permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
+        permission_classes = []
+        if self.action == 'create':
+            permission_classes += [IsStudent]
+        elif self.action == 'list':
+            permission_classes += [IsTeacher | IsStudent]
+        elif self.action == 'retrieve':
+            permission_classes += [IsTeacher | IsStudent]
+        elif self.action in {'update', 'partial_update'}:
+            permission_classes += [IsStudent]
+        elif self.action == 'destroy':
+            permission_classes += [IsSuperuser]
+
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name="superusers").exists():
+            return HomeworkInstance.objects.all()
+        elif user.groups.filter(name="teachers").exists():
+            return HomeworkInstance.objects.filter(homework__lecture__course__teachers__email=user)
+        elif user.groups.filter(name="students").exists():
+            return HomeworkInstance.objects.filter(homework__lecture__course__students__email=user)

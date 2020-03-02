@@ -1,12 +1,14 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
+from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
-from .models import User, Group, Course, Lecture, Homework
+from .models import User, Group, Course, Lecture, Homework, HomeworkInstance
 
 
 class UserSerializer(serializers.Serializer):
-    id = serializers.IntegerField(label='ID', required=False)
-    email = serializers.EmailField(max_length=40, required=True, validators=[UniqueValidator(queryset=User.objects.all())])
+    id = serializers.IntegerField(label="ID", required=False)
+    email = serializers.EmailField(
+        max_length=40, required=True, validators=[UniqueValidator(queryset=User.objects.all())]
+    )
     first_name = serializers.CharField(allow_blank=True, max_length=30, required=True)
     last_name = serializers.CharField(allow_blank=True, max_length=30, required=True)
     date_joined = serializers.ReadOnlyField()
@@ -16,12 +18,12 @@ class UserSerializer(serializers.Serializer):
     user_group = serializers.SerializerMethodField()   # To get "group" in serializer.data then.
 
     _GROUP_NAMES = tuple(str(group) for group in Group.objects.all())
-    def validate_group(self, value):
 
+    def validate_group(self, value):
         if value == "superusers":
-            raise serializers.ValidationError(f"Superuser cannot be created this way.")
+            raise serializers.ValidationError({"detail": ["Superuser cannot be created this way."]})
         elif value not in self._GROUP_NAMES:
-            raise serializers.ValidationError(f"Group {value} doesn't exist.")
+            raise serializers.ValidationError({"group": [f"Group {value} not exists."]})
         else:
             return value
 
@@ -57,9 +59,11 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'teachers', 'students',
-                  'teachers_emails', 'students_emails',
-                  'course_teachers', 'course_students']
+        fields = (
+            "id", "title", "teachers", "students",
+            "teachers_emails", "students_emails",
+            "course_teachers", "course_students"
+        )
         extra_kwargs = {
             "id": {"required": False},
             "teachers": {"required": False, "write_only": True},
@@ -72,7 +76,7 @@ class CourseSerializer(serializers.ModelSerializer):
             for email_as_text in value:
                 users_querysets.append(User.objects.get(email=email_as_text, groups__name="teachers"))
         except User.DoesNotExist:
-            raise serializers.ValidationError(f"Teacher with email {email_as_text} doesn't exist.")
+            raise serializers.ValidationError({"teachers_email": [f"Teacher with email {email_as_text} not exists."]})
         else:
             return users_querysets
 
@@ -82,7 +86,7 @@ class CourseSerializer(serializers.ModelSerializer):
             for email_as_text in value:
                 users_querysets.append(User.objects.get(email=email_as_text, groups__name="students"))
         except User.DoesNotExist:
-            raise serializers.ValidationError(f"Student with email {email_as_text} doesn't exist.")
+            raise serializers.ValidationError({"students_email": [f"Student with email {email_as_text} not exists."]})
         else:
             return users_querysets
 
@@ -94,7 +98,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
         teachers.append(user)
 
-        course = Course(title=validated_data['title'])
+        course = Course(title=validated_data["title"])
         course.save()
         course.teachers.set(teachers)
         course.students.set(students)
@@ -102,80 +106,142 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class LectureSerializer(serializers.ModelSerializer):
-    course_name = serializers.CharField(write_only=True, required=True)
+    course_name = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = Lecture
-        fields = [
-            'id', 'title', 'file', 'course_id',
-            'course_name'
-        ]
+
+        fields = ("id", "title", "file", "course", "course_name")
 
         extra_kwargs = {
             "id": {"required": False},
-            "course_id": {"required": False},
-            # "course_name": {"required": False, "write_only": True},
-            "title": {"validators": [UniqueValidator(queryset=Lecture.objects.all())]}
+            "course": {"required": False}
         }
+
 
     def validate_course_name(self, value):
         if Course.objects.filter(title=value).exists():
             return value  # str
         else:
-            raise serializers.ValidationError(f"Course {value} doesn't exist.")
+            raise serializers.ValidationError({"course_name": [f"course_name {value} not exists."]})
+
+    def _get_course_id(self):
+        if "course" in self.validated_data:
+            course_id = self.validated_data["course"].id
+            return course_id
+        elif "course_name" in self.validated_data:
+            course_id = Course.objects.get(title=self.validated_data["course_name"]).id
+            return course_id
+        else:
+            raise serializers.ValidationError({
+                "course": ["This field or course_name are required."],
+                "course_name": ["This field or course are required."]
+            })
+
+    def _unique_together_courseid_title_validator(self, course_id, title):
+        if Lecture.objects.filter(course_id=course_id, title=title).exists():
+            raise serializers.ValidationError({
+                "detail": ["The fields 'title' and 'course' must be unique together."],
+            })
 
     def create(self, validated_data):
-        if 'course_id' in validated_data:
-            course_id = validated_data['course_id']
-        elif 'course_name' in validated_data:
-            course_id = Course.objects.get(title=validated_data['course_name']).id
-        else:
-            raise
+        print(validated_data)
+        course_id = self._get_course_id()
+        title = validated_data["title"]
+
+        self._unique_together_courseid_title_validator(course_id, title)
 
         lecture = Lecture(
-            title=validated_data['title'],
-            file=validated_data['file'],
+            title=validated_data["title"],
+            file=validated_data["file"],
             course_id=course_id
         )
         lecture.save()
         return lecture
 
+    def update(self, instance, validated_data):
+        course_id = instance.course_id
+        title = validated_data.get("title", instance.title)
+        if title != instance.title:
+            self._unique_together_courseid_title_validator(course_id, title)
+        instance.title = title
+        instance.file = validated_data.get("file", instance.file)
+        instance.save()
+        return instance
+
 
 class HomeworkSerializer(serializers.ModelSerializer):
-    lecture_name = serializers.CharField(write_only=True, required=True)
-
     class Meta:
         model = Homework
-        fields = [
-            'id', 'title', 'text', 'lecture_id',
-            'lecture_name'
+        fields = ("id", "title", "text", "lecture")
+
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Homework.objects.all(),
+                fields=("title", "lecture")
+            )
         ]
 
+
+class HomeworkInstanceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = HomeworkInstance
+
+        fields = ("id", "homework", "student", "file", "is_done")
         extra_kwargs = {
-            "id": {"required": False},
-            "lecture_id": {"required": False},
-            # "lecture_name": {"required": False, "write_only": True},
-            "title": {"validators": [UniqueValidator(queryset=Homework.objects.all())]}
+            "student": {"required": False},
+            "homework": {"required": False}
         }
 
-    def validate_lecture_name(self, value):
-        if Lecture.objects.filter(title=value).exists():
-            return value  # str
+    def _get_student_id(self):
+        user = self.context["request"].user
+
+        if user.groups.filter(name="students").exists():
+            student_id = user.id
+            return student_id
+
+        elif "student" in self.validated_data:
+            student_id = self.validated_data["student"].id
+            return student_id
+
         else:
-            raise serializers.ValidationError(f"Lecture {value} doesn't exist.")
+            raise serializers.ValidationError(
+                {
+                    "detail": ["auth user must be a student or student field must be defined."],
+                    "student": ["auth user must be a student or student field must be defined."]
+                }
+            )
+
+    def _get_homework_id(self):  # without it update-function always wants to get "homework" but this is immutable field
+        if "homework" in self.validated_data:
+            return self.validated_data["homework"].id
+        else:
+            return serializers.ValidationError({"homework": ["This field is required."]})
+
+    def _unique_together_homeworkid_studentid_validator(self, homework_id, student_id):
+        if HomeworkInstance.objects.filter(homework_id=homework_id, student_id=student_id).exists():
+            raise serializers.ValidationError({
+                "detail": ["The fields 'homework_id' and 'student_id' must be unique together. "
+                           "(This homework instance already exists)."],
+            })
 
     def create(self, validated_data):
-        if 'lecture_id' in validated_data:
-            lecture_id = validated_data['lecture_id']
-        elif 'lecture_name' in validated_data:
-            lecture_id = Lecture.objects.get(title=validated_data['lecture_name']).id
-        else:
-            raise
+        student_id = self._get_student_id()
+        homework_id = self._get_homework_id()
+        self._unique_together_homeworkid_studentid_validator(homework_id, student_id)
 
-        homework = Homework(
-            title=validated_data['title'],
-            text=validated_data['text'],
-            lecture_id=lecture_id
+        homework_instance = HomeworkInstance(
+            homework_id=homework_id,
+            student_id=student_id,
+            file=validated_data["file"] if "file" in validated_data else None,
+            is_done=validated_data["is_done"] if "is_done" in validated_data else False,
         )
-        homework.save()
-        return homework
+        homework_instance.save()
+        return homework_instance
+
+    def update(self, instance, validated_data):
+        instance.file = validated_data.get("file", instance.file)
+        instance.is_done = validated_data.get("is_done", instance.is_done)
+        instance.save()
+        return instance

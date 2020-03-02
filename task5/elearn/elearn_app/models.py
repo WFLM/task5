@@ -77,6 +77,9 @@ class Lecture(models.Model):
 
 
 class Homework(models.Model):
+    class Meta:
+        unique_together = (("lecture_id", "title"),)
+
     lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE)
     title = models.CharField(max_length=128, null=False)
     text = models.TextField(null=False)
@@ -87,7 +90,7 @@ class Homework(models.Model):
 
 class HomeworkInstance(models.Model):
     class Meta:
-        unique_together = (("homework", "student"),)
+        unique_together = (("homework_id", "student_id"),)
 
     homework = models.ForeignKey(Homework, on_delete=models.CASCADE)
     student = models.ForeignKey(User, on_delete=models.CASCADE)
