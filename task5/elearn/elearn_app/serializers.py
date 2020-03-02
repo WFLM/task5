@@ -119,52 +119,55 @@ class LectureSerializer(serializers.ModelSerializer):
             "course": {"required": False}
         }
 
-
     def validate_course_name(self, value):
         if Course.objects.filter(title=value).exists():
             return value  # str
         else:
             raise serializers.ValidationError({"course_name": [f"course_name {value} not exists."]})
 
-    def _get_course_id(self):
+    def _get_course(self):
         if "course" in self.validated_data:
-            course_id = self.validated_data["course"].id
-            return course_id
+            return self.validated_data["course"]
         elif "course_name" in self.validated_data:
-            course_id = Course.objects.get(title=self.validated_data["course_name"]).id
-            return course_id
+            return Course.objects.get(title=self.validated_data["course_name"])
+
         else:
             raise serializers.ValidationError({
                 "course": ["This field or course_name are required."],
                 "course_name": ["This field or course are required."]
             })
 
-    def _unique_together_courseid_title_validator(self, course_id, title):
-        if Lecture.objects.filter(course_id=course_id, title=title).exists():
+    def _unique_together_courseid_title_validator(self, course, title):
+        if Lecture.objects.filter(course=course, title=title).exists():
             raise serializers.ValidationError({
                 "detail": ["The fields 'title' and 'course' must be unique together."],
             })
 
-    def create(self, validated_data):
-        print(validated_data)
-        course_id = self._get_course_id()
-        title = validated_data["title"]
+    def _check_users_permissions(self, course):
+        user = self.context["request"].user
+        if not course.teachers.filter(email=user).exists():
+            raise serializers.ValidationError({"detail": ["Access denied."]})
 
-        self._unique_together_courseid_title_validator(course_id, title)
+    def create(self, validated_data):
+        course = self._get_course()
+        self._check_users_permissions(course)
+        title = validated_data["title"]
+        self._unique_together_courseid_title_validator(course, title)
 
         lecture = Lecture(
             title=validated_data["title"],
             file=validated_data["file"],
-            course_id=course_id
+            course=course
         )
         lecture.save()
         return lecture
 
     def update(self, instance, validated_data):
-        course_id = instance.course_id
+        course = instance.course
+        self._check_users_permissions(course)
         title = validated_data.get("title", instance.title)
         if title != instance.title:
-            self._unique_together_courseid_title_validator(course_id, title)
+            self._unique_together_courseid_title_validator(course, title)
         instance.title = title
         instance.file = validated_data.get("file", instance.file)
         instance.save()
@@ -182,6 +185,13 @@ class HomeworkSerializer(serializers.ModelSerializer):
                 fields=("title", "lecture")
             )
         ]
+
+    def _check_users_permissions(self):
+        user = self.context["request"].user
+        if not Course.objects.filter(teachers=user).exists():
+            raise serializers.ValidationError({"detail": ["Access denied."]})
+
+
 
 
 class HomeworkInstanceSerializer(serializers.ModelSerializer):
@@ -304,4 +314,5 @@ class HomeworkInstanceMarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = HomeworkInstanceMark
 
-        fields = ("id", "mark", "homework_instance")
+        fields = ("id", "mark")
+
