@@ -186,12 +186,29 @@ class HomeworkSerializer(serializers.ModelSerializer):
             )
         ]
 
-    def _check_users_permissions(self):
+    def _check_users_permissions(self, lecture):
         user = self.context["request"].user
-        if not Course.objects.filter(teachers=user).exists():
+        if not lecture.course.teachers.filter(email=user).exists():
             raise serializers.ValidationError({"detail": ["Access denied."]})
 
+    def create(self, validate_data):
+        lecture = validate_data["lecture"]
+        self._check_users_permissions(lecture)
+        homework = Homework(
+            title=validate_data["title"],
+            text=validate_data["text"],
+            lecture=lecture
+        )
+        homework.save()
+        return homework
 
+    def update(self, instance, validated_data):
+        lecture = instance.lecture
+        self._check_users_permissions(lecture)
+        instance.title = validated_data.get("title", instance.title)
+        instance.text = validated_data.get("text", instance.text)
+        instance.save()
+        return instance
 
 
 class HomeworkInstanceSerializer(serializers.ModelSerializer):
