@@ -9,7 +9,7 @@ from django.conf import settings
 
 from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment
 from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
-    HomeworkInstanceSerializer, HomeworkInstanceCommentSerializer
+    HomeworkInstanceSerializer, HomeworkInstanceCommentSerializer, HomeworkInstanceMarkSerializer
 
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
@@ -209,7 +209,7 @@ class HomeworkInstanceCommentViewSet(ModelViewSet):
         # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
         permission_classes = []
         if self.action == 'create':
-            permission_classes += [IsTeacher | IsTeacher | IsStudent]
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
         elif self.action == 'list':
             permission_classes += [IsSuperuser | IsTeacher | IsStudent]
         elif self.action == 'retrieve':
@@ -218,6 +218,36 @@ class HomeworkInstanceCommentViewSet(ModelViewSet):
             permission_classes += [IsSuperuser | IsTeacher | IsStudent]
         elif self.action == 'destroy':
             permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name="superusers").exists():
+            return HomeworkInstanceComment.objects.all()
+        elif user.groups.filter(name="teachers").exists():
+            return HomeworkInstanceComment.objects.filter(homework_instance__homework__lecture__course__teachers__email=user)
+        elif user.groups.filter(name="students").exists():
+            return HomeworkInstanceComment.objects.filter(homework_instance__student_id=user)
+
+
+class HomeworkInstanceMarkViewSet(ModelViewSet):
+    authentication_classes = [TokenAuthentication]
+    serializer_class = HomeworkInstanceMarkSerializer
+
+    def get_permissions(self):
+        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
+        permission_classes = []
+        if self.action == 'create':
+            permission_classes += [IsSuperuser | IsTeacher]
+        elif self.action == 'list':
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+        elif self.action == 'retrieve':
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+        elif self.action in {'update', 'partial_update'}:
+            permission_classes += [IsSuperuser | IsTeacher]
+        elif self.action == 'destroy':
+            permission_classes += [IsSuperuser | IsTeacher]
 
         return [permission() for permission in permission_classes]
 

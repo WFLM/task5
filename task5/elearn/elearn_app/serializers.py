@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
-from .models import User, Group, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment
+from .models import User, Group, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment, \
+    HomeworkInstanceMark
 
 
 class UserSerializer(serializers.Serializer):
@@ -297,3 +298,10 @@ class HomeworkInstanceCommentSerializer(serializers.ModelSerializer):
         instance.body = validated_data.get("body", instance.body)
         instance.save()
         return instance
+
+
+class HomeworkInstanceMarkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HomeworkInstanceMark
+
+        fields = ("id", "mark", "homework_instance")
