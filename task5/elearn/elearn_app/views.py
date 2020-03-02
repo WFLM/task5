@@ -7,9 +7,9 @@ from rest_framework.authentication import TokenAuthentication
 
 from django.conf import settings
 
-from .models import User, Course, Lecture, Homework, HomeworkInstance
+from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment
 from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
-    HomeworkInstanceSerializer
+    HomeworkInstanceSerializer, HomeworkInstanceCommentSerializer
 
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
@@ -197,3 +197,35 @@ class HomeworkInstanceViewSet(ModelViewSet):
             return HomeworkInstance.objects.filter(homework__lecture__course__teachers__email=user)
         elif user.groups.filter(name="students").exists():
             return HomeworkInstance.objects.filter(homework__lecture__course__students__email=user)
+
+
+class HomeworkInstanceCommentViewSet(ModelViewSet):
+    authentication_classes = [TokenAuthentication]
+    # queryset = HomeworkInstanceComment.objects.all()
+    serializer_class = HomeworkInstanceCommentSerializer
+    # permission_classes = [AllowAny | IsStudent]
+
+    def get_permissions(self):
+        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
+        permission_classes = []
+        if self.action == 'create':
+            permission_classes += [IsTeacher | IsTeacher | IsStudent]
+        elif self.action == 'list':
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+        elif self.action == 'retrieve':
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+        elif self.action in {'update', 'partial_update'}:
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+        elif self.action == 'destroy':
+            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
+
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name="superusers").exists():
+            return HomeworkInstanceComment.objects.all()
+        elif user.groups.filter(name="teachers").exists():
+            return HomeworkInstanceComment.objects.filter(homework_instance__homework__lecture__course__teachers__email=user)
+        elif user.groups.filter(name="students").exists():
+            return HomeworkInstanceComment.objects.filter(homework_instance__student_id=user)

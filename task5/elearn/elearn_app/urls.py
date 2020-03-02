@@ -8,7 +8,7 @@ from drf_yasg import openapi
 
 from .views import CreateUserAPIView, \
     LoginView, LogoutView, UserViewSet, \
-    CourseViewSet, LectureViewSet, HomeworkViewSet, HomeworkInstanceViewSet
+    CourseViewSet, LectureViewSet, HomeworkViewSet, HomeworkInstanceViewSet, HomeworkInstanceCommentViewSet
 
 
 router = DefaultRouter()
@@ -18,6 +18,7 @@ router.register('course', CourseViewSet, basename='course')
 router.register('lecture', LectureViewSet, basename='lecture')
 router.register('homework', HomeworkViewSet, basename='homework')
 router.register('homework_instance', HomeworkInstanceViewSet, basename="homework-instance")
+router.register("homework_instance_comment", HomeworkInstanceCommentViewSet, basename="homework_instance_comment")
 
 schema_view = get_schema_view(
    openapi.Info(
