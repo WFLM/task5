@@ -91,6 +91,7 @@ class CourseSerializer(serializers.ModelSerializer):
         else:
             return users_querysets
 
+
     def create(self, validated_data):
         user = self.context["request"].user
 
@@ -104,6 +105,24 @@ class CourseSerializer(serializers.ModelSerializer):
         course.teachers.set(teachers)
         course.students.set(students)
         return course
+
+    # def update(self, instance, validated_data):
+    #     user = self.context["request"].user
+    #     if not instance.teachers.filter(email=user).exists():
+    #         raise serializers.ValidationError({"detail": ["Access denied."]})
+    #     instance.title = validated_data.get("title", instance.title)
+    #     if "teachers_emails" in validated_data:
+    #         instance.teachers.set(validated_data["teachers_emails"])
+    #     else:
+    #         instance.teachers.set(validated_data.get("teachers", instance.teachers.all()))
+    #
+    #     if "students_emails" in validated_data:
+    #         instance.students.set(validated_data["students_emails"])
+    #     else:
+    #         instance.students.set(validated_data.get("students", instance.students.all()))
+    #
+    #     instance.save()
+    #     return instance
 
 
 class LectureSerializer(serializers.ModelSerializer):
@@ -218,50 +237,42 @@ class HomeworkInstanceSerializer(serializers.ModelSerializer):
 
         fields = ("id", "homework", "student", "file", "is_done")
         extra_kwargs = {
-            "student": {"required": False},
+            "student": {"required": False, "read_only": True},
             "homework": {"required": False}
         }
 
-    def _get_student_id(self):
+    def _get_student(self, homework):
         user = self.context["request"].user
 
-        if user.groups.filter(name="students").exists():
-            student_id = user.id
-            return student_id
-
-        elif "student" in self.validated_data:
-            student_id = self.validated_data["student"].id
-            return student_id
-
+        if homework.lecture.course.students.filter(email=user).exists():
+            return user
         else:
-            raise serializers.ValidationError(
-                {
-                    "detail": ["auth user must be a student or student field must be defined."],
-                    "student": ["auth user must be a student or student field must be defined."]
-                }
-            )
-
-    def _get_homework_id(self):  # without it update-function always wants to get "homework" but this is immutable field
-        if "homework" in self.validated_data:
-            return self.validated_data["homework"].id
-        else:
-            return serializers.ValidationError({"homework": ["This field is required."]})
-
-    def _unique_together_homeworkid_studentid_validator(self, homework_id, student_id):
-        if HomeworkInstance.objects.filter(homework_id=homework_id, student_id=student_id).exists():
             raise serializers.ValidationError({
-                "detail": ["The fields 'homework_id' and 'student_id' must be unique together. "
+                    "detail": ["Access denied. "
+                               "(Auth user not a student or doesn't have access to the course)."],
+                })
+
+    def _get_homework(self):  # without it update-function always wants to get "homework" but this is immutable field
+        if "homework" in self.validated_data:
+            return self.validated_data["homework"]
+        else:
+            raise serializers.ValidationError({"homework": ["This field is required."]})
+
+    def _unique_together_homework_student_validator(self, homework, student):
+        if HomeworkInstance.objects.filter(homework=homework, student_id=student).exists():
+            raise serializers.ValidationError({
+                "detail": ["The fields 'homework' and 'student' must be unique together. "
                            "(This homework instance already exists)."],
             })
 
     def create(self, validated_data):
-        student_id = self._get_student_id()
-        homework_id = self._get_homework_id()
-        self._unique_together_homeworkid_studentid_validator(homework_id, student_id)
+        homework = self._get_homework()
+        student = self._get_student(homework)
+        self._unique_together_homework_student_validator(homework, student)
 
         homework_instance = HomeworkInstance(
-            homework_id=homework_id,
-            student_id=student_id,
+            homework=homework,
+            student=student,
             file=validated_data["file"] if "file" in validated_data else None,
             is_done=validated_data["is_done"] if "is_done" in validated_data else False,
         )
@@ -269,6 +280,8 @@ class HomeworkInstanceSerializer(serializers.ModelSerializer):
         return homework_instance
 
     def update(self, instance, validated_data):
+        homework = instance.homework
+        self._get_student(homework)
         instance.file = validated_data.get("file", instance.file)
         instance.is_done = validated_data.get("is_done", instance.is_done)
         instance.save()
