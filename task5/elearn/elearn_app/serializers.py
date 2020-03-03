@@ -107,23 +107,23 @@ class CourseSerializer(serializers.ModelSerializer):
         course.students.set(students)
         return course
 
-    # def update(self, instance, validated_data):
-    #     user = self.context["request"].user
-    #     if not instance.teachers.filter(email=user).exists():
-    #         raise serializers.ValidationError({"detail": ["Access denied."]})
-    #     instance.title = validated_data.get("title", instance.title)
-    #     if "teachers_emails" in validated_data:
-    #         instance.teachers.set(validated_data["teachers_emails"])
-    #     else:
-    #         instance.teachers.set(validated_data.get("teachers", instance.teachers.all()))
-    #
-    #     if "students_emails" in validated_data:
-    #         instance.students.set(validated_data["students_emails"])
-    #     else:
-    #         instance.students.set(validated_data.get("students", instance.students.all()))
-    #
-    #     instance.save()
-    #     return instance
+    def update(self, instance, validated_data):
+        user = self.context["request"].user
+        if not instance.teachers.filter(email=user).exists():
+            raise serializers.ValidationError({"detail": ["Access denied."]})
+        instance.title = validated_data.get("title", instance.title)
+        if "teachers_emails" in validated_data:
+            instance.teachers.set(validated_data["teachers_emails"] + [user])
+        else:
+            instance.teachers.set(validated_data.get("teachers", instance.teachers.all()))
+
+        if "students_emails" in validated_data:
+            instance.students.set(validated_data["students_emails"])
+        else:
+            instance.students.set(validated_data.get("students", instance.students.all()))
+
+        instance.save()
+        return instance
 
 
 class LectureSerializer(serializers.ModelSerializer):
