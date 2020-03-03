@@ -349,6 +349,40 @@ class HomeworkInstanceCommentSerializer(serializers.ModelSerializer):
 class HomeworkInstanceMarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = HomeworkInstanceMark
+        fields = ("id", "mark", "homework_instance")
+        extra_kwargs = {"homework_instance": {"required": False}}
 
-        fields = ("id", "mark")
+    def _get_homework_instance(self):  # without it update-function always wants to get "homework_instance" but this is immutable field
+        if "homework_instance" in self.validated_data:
+            return self.validated_data["homework_instance"]
+        else:
+            raise serializers.ValidationError({"homework_instance": ["This field is required."]})
 
+    def validate_mark(self, value):
+        if not (0 <= value <= 100):
+            raise serializers.ValidationError({"mark": [f"Mark value must be in [0:100]"]})
+        else:
+            return value
+
+    def _check_users_permissions(self, homework_instance):
+        user = self.context["request"].user
+        if not homework_instance.homework.lecture.course.teachers.filter(email=user).exists():
+            raise serializers.ValidationError({"detail": ["Access denied."]})
+
+    def create(self, validated_data):
+        homework_instance = self._get_homework_instance()
+        self._check_users_permissions(homework_instance)
+
+        homework_instance_mark = HomeworkInstanceMark(
+            homework_instance=homework_instance,
+            mark=validated_data["mark"] if "mark" in validated_data else None
+        )
+        homework_instance_mark.save()
+        return homework_instance_mark
+
+    def update(self, instance, validated_data):
+        homework_instance = instance.homework_instance
+        self._check_users_permissions(homework_instance)
+        instance.mark = validated_data.get("mark", instance.mark)
+        instance.save()
+        return instance

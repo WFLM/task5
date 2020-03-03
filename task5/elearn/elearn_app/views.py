@@ -7,7 +7,7 @@ from rest_framework.authentication import TokenAuthentication
 
 from django.conf import settings
 
-from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment
+from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment, HomeworkInstanceMark
 from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
     HomeworkInstanceSerializer, HomeworkInstanceCommentSerializer, HomeworkInstanceMarkSerializer
 
@@ -254,8 +254,8 @@ class HomeworkInstanceMarkViewSet(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.groups.filter(name="superusers").exists():
-            return HomeworkInstanceComment.objects.all()
+            return HomeworkInstanceMark.objects.all()
         elif user.groups.filter(name="teachers").exists():
-            return HomeworkInstanceComment.objects.filter(homework_instance__homework__lecture__course__teachers__email=user)
+            return HomeworkInstanceMark.objects.filter(homework_instance__homework__lecture__course__teachers__email=user)
         elif user.groups.filter(name="students").exists():
-            return HomeworkInstanceComment.objects.filter(homework_instance__student_id=user)
+            return HomeworkInstanceMark.objects.filter(homework_instance__student_id=user)
