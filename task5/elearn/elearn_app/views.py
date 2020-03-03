@@ -1,24 +1,20 @@
-from django.contrib.auth import user_logged_in
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.decorators import api_view
-from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ViewSet, ModelViewSet
 from rest_framework.authentication import TokenAuthentication
-
-from django.conf import settings
-
-from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment, HomeworkInstanceMark
-from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
-    HomeworkInstanceSerializer, HomeworkInstanceCommentSerializer, HomeworkInstanceMarkSerializer
-
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
-from .permission import IsLogged, IsSuperuser, IsTeacher, IsStudent
+
+from drf_yasg.utils import swagger_auto_schema
+
+from .permission import IsSuperuser, IsTeacher, IsStudent
+from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment, HomeworkInstanceMark
+from .serializers import (
+    UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer,
+    HomeworkInstanceSerializer, HomeworkInstanceCommentSerializer, HomeworkInstanceMarkSerializer
+)
 
 
 class CreateUserAPIView(APIView):
@@ -39,20 +35,15 @@ class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
 
     def get_permissions(self):
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes = [IsSuperuser]
-        elif self.action == 'list':
-            permission_classes = [IsSuperuser]
-        elif self.action == 'retrieve' or self.action == 'update' or self.action == 'partial_update':
-            permission_classes = [IsSuperuser]
-        elif self.action == 'destroy':
-            permission_classes = [IsSuperuser]
-        return [permission() for permission in permission_classes]
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            return [IsSuperuser()]
+        elif self.action in {"list", "retrieve"}:
+            return [(IsSuperuser | IsTeacher)()]
 
 
 class LoginView(ViewSet):
     serializer_class = AuthTokenSerializer
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(request_body=AuthTokenSerializer, tags=("Accounting",))
     def create(self, request):
@@ -61,6 +52,8 @@ class LoginView(ViewSet):
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(tags=("Accounting",))
     def post(self, request, format=None):
         request.user.auth_token.delete()
@@ -69,24 +62,13 @@ class LogoutView(APIView):
 
 class CourseViewSet(ModelViewSet):
     authentication_classes = [TokenAuthentication]
-    queryset = Course.objects.all()
     serializer_class = CourseSerializer
 
     def get_permissions(self):
-        # permission_classes = [IsSuperuser]
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes += [IsTeacher]
-        elif self.action == 'list':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action == 'retrieve':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action in {'update', 'partial_update'}:
-            permission_classes += [IsTeacher]
-        elif self.action == 'destroy':
-            permission_classes += [IsTeacher]
-
-        return [permission() for permission in permission_classes]
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            return [(IsSuperuser | IsTeacher)()]
+        elif self.action in {"list", "retrieve"}:
+            return [(IsSuperuser | IsTeacher | IsStudent)()]
 
     def get_queryset(self):
         user = self.request.user
@@ -97,37 +79,16 @@ class CourseViewSet(ModelViewSet):
         elif user.groups.filter(name="students").exists():
             return Course.objects.filter(students__email=user)
 
-    # def retrieve(self, request, *args, **kwargs):
-    #     user = request.user
-    #     queryset = Course.objects.filter(teachers__email=user)
-    #     serializer = CourseSerializer
-    #     print(queryset)
-    #     print(request.user)
-    #     return Response(serializer)
-
 
 class LectureViewSet(ModelViewSet):
-
     authentication_classes = [TokenAuthentication]
-    # queryset = Lecture.objects.all()
     serializer_class = LectureSerializer
-    # permission_classes = [AllowAny]
 
     def get_permissions(self):
-        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes += [IsTeacher]
-        elif self.action == 'list':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action == 'retrieve':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action in {'update', 'partial_update'}:
-            permission_classes += [IsTeacher]
-        elif self.action == 'destroy':
-            permission_classes += [IsTeacher]
-
-        return [permission() for permission in permission_classes]
+        if self.action in {"create", "update", "partial_update", " destroy"}:
+            return [(IsSuperuser | IsTeacher)()]
+        elif self.action in {"list", "retrieve"}:
+            return [(IsSuperuser | IsTeacher | IsStudent)()]
 
     def get_queryset(self):
         user = self.request.user
@@ -140,27 +101,14 @@ class LectureViewSet(ModelViewSet):
 
 
 class HomeworkViewSet(ModelViewSet):
-
     authentication_classes = [TokenAuthentication]
-    # queryset = Homework.objects.all()
     serializer_class = HomeworkSerializer
-    # permission_classes = [AllowAny]
 
     def get_permissions(self):
-        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes += [IsTeacher]
-        elif self.action == 'list':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action == 'retrieve':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action in {'update', 'partial_update'}:
-            permission_classes += [IsTeacher]
-        elif self.action == 'destroy':
-            permission_classes += [IsTeacher]
-
-        return [permission() for permission in permission_classes]
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            return [(IsSuperuser | IsTeacher)()]
+        elif self.action in {"list", "retrieve"}:
+            return [(IsSuperuser | IsTeacher | IsStudent)()]
 
     def get_queryset(self):
         user = self.request.user
@@ -174,25 +122,15 @@ class HomeworkViewSet(ModelViewSet):
 
 class HomeworkInstanceViewSet(ModelViewSet):
     authentication_classes = [TokenAuthentication]
-    # queryset = HomeworkInstance.objects.all()
     serializer_class = HomeworkInstanceSerializer
-    # permission_classes = [AllowAny]
 
     def get_permissions(self):
-        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes += [IsStudent]
-        elif self.action == 'list':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action == 'retrieve':
-            permission_classes += [IsTeacher | IsStudent]
-        elif self.action in {'update', 'partial_update'}:
-            permission_classes += [IsStudent]
+        if self.action in {"create", "update", "partial_update"}:
+            return [IsStudent()]
+        elif self.action in {"list", "retrieve"}:
+            return [(IsSuperuser | IsTeacher | IsStudent)()]
         elif self.action == 'destroy':
-            permission_classes += [IsSuperuser]
-
-        return [permission() for permission in permission_classes]
+            return [IsSuperuser()]
 
     def get_queryset(self):
         user = self.request.user
@@ -206,32 +144,18 @@ class HomeworkInstanceViewSet(ModelViewSet):
 
 class HomeworkInstanceCommentViewSet(ModelViewSet):
     authentication_classes = [TokenAuthentication]
-    # queryset = HomeworkInstanceComment.objects.all()
     serializer_class = HomeworkInstanceCommentSerializer
-    # permission_classes = [AllowAny | IsStudent]
 
     def get_permissions(self):
-        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-        elif self.action == 'list':
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-        elif self.action == 'retrieve':
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-        elif self.action in {'update', 'partial_update'}:
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-        elif self.action == 'destroy':
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-
-        return [permission() for permission in permission_classes]
+        return [(IsSuperuser | IsTeacher | IsStudent)()]
 
     def get_queryset(self):
         user = self.request.user
         if user.groups.filter(name="superusers").exists():
             return HomeworkInstanceComment.objects.all()
         elif user.groups.filter(name="teachers").exists():
-            return HomeworkInstanceComment.objects.filter(homework_instance__homework__lecture__course__teachers__email=user)
+            return HomeworkInstanceComment.objects.filter(
+                homework_instance__homework__lecture__course__teachers__email=user)
         elif user.groups.filter(name="students").exists():
             return HomeworkInstanceComment.objects.filter(homework_instance__student_id=user)
 
@@ -241,26 +165,17 @@ class HomeworkInstanceMarkViewSet(ModelViewSet):
     serializer_class = HomeworkInstanceMarkSerializer
 
     def get_permissions(self):
-        # permission_classes = [IsSuperuser]  # reduce + operator.or_ ?
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes += [IsSuperuser | IsTeacher]
-        elif self.action == 'list':
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-        elif self.action == 'retrieve':
-            permission_classes += [IsSuperuser | IsTeacher | IsStudent]
-        elif self.action in {'update', 'partial_update'}:
-            permission_classes += [IsSuperuser | IsTeacher]
-        elif self.action == 'destroy':
-            permission_classes += [IsSuperuser | IsTeacher]
-
-        return [permission() for permission in permission_classes]
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            return [(IsSuperuser | IsTeacher)()]
+        elif self.action in {"list", "retrieve"}:
+            return [(IsSuperuser | IsTeacher | IsStudent)()]
 
     def get_queryset(self):
         user = self.request.user
         if user.groups.filter(name="superusers").exists():
             return HomeworkInstanceMark.objects.all()
         elif user.groups.filter(name="teachers").exists():
-            return HomeworkInstanceMark.objects.filter(homework_instance__homework__lecture__course__teachers__email=user)
+            return HomeworkInstanceMark.objects.filter(
+                homework_instance__homework__lecture__course__teachers__email=user)
         elif user.groups.filter(name="students").exists():
             return HomeworkInstanceMark.objects.filter(homework_instance__student_id=user)
