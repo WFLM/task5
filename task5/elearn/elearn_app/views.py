@@ -1,6 +1,9 @@
 from django.contrib.auth import user_logged_in
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.decorators import api_view
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ViewSet, ModelViewSet
 from rest_framework.authentication import TokenAuthentication
@@ -15,12 +18,13 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
-from .permission import IsLogged, IsSuperuser, IsTeacher, IsStudent, IsStudentOwn
+from .permission import IsLogged, IsSuperuser, IsTeacher, IsStudent
 
 
 class CreateUserAPIView(APIView):
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(request_body=UserSerializer, tags=("Accounting",))
     def post(self, request):
         user = request.data
         serializer = UserSerializer(data=user)
@@ -30,10 +34,9 @@ class CreateUserAPIView(APIView):
 
 
 class UserViewSet(ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
     authentication_classes = [TokenAuthentication]
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
 
     def get_permissions(self):
         permission_classes = []
@@ -51,12 +54,14 @@ class UserViewSet(ModelViewSet):
 class LoginView(ViewSet):
     serializer_class = AuthTokenSerializer
 
+    @swagger_auto_schema(request_body=AuthTokenSerializer, tags=("Accounting",))
     def create(self, request):
         return ObtainAuthToken().post(request)
 
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
+    @swagger_auto_schema(tags=("Accounting",))
     def post(self, request, format=None):
         request.user.auth_token.delete()
         return Response(status=status.HTTP_200_OK)

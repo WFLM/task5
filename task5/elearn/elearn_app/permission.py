@@ -61,17 +61,3 @@ class IsStudent(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         has_group_permission = _has_group_permission(request.user, self.required_groups)
         return request.user and has_group_permission
-
-
-class IsStudentOwn(permissions.BasePermission):
-    required_groups = ['students']
-
-    def has_permission(self, request, view):
-        has_group_permission = _has_group_permission(request.user, self.required_groups)
-        return request.user and has_group_permission and request.user.is_authenticated
-
-    def has_object_permission(self, request, view, obj):
-        has_group_permission = _has_group_permission(request.user, self.required_groups)
-        return has_group_permission and obj.students.filter(email=request.user.email).exists()
-
-
