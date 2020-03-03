@@ -1,1 +1,15 @@
 LeverX Python Courses 2020. Task 5.
+
+
+swagger there : /api/swagger/
+
+Accounting:
+      Registration: POST /api/register/
+      Login: POST /api/login/ - Use this token in the requests header as:
+                                                                KEY: Authorization
+                                                                VALUE: Token {token}
+      Logout: POST /api/logout/
+
+
+
+Django admin interface is used at one's own risk and can be deleted.
