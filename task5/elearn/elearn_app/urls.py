@@ -6,10 +6,10 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-from .views import CreateUserAPIView, \
-    LoginView, LogoutView, UserViewSet, \
-    CourseViewSet, LectureViewSet, HomeworkViewSet, HomeworkInstanceViewSet, HomeworkInstanceCommentViewSet, \
-    HomeworkInstanceMarkViewSet
+from .views import (
+    CreateUserAPIView, LoginView, LogoutView, UserViewSet, CourseViewSet, LectureViewSet,
+    HomeworkViewSet, HomeworkInstanceViewSet, HomeworkInstanceCommentViewSet, HomeworkInstanceMarkViewSet
+)
 
 router = DefaultRouter()
 router.register('login', LoginView, basename='login')
@@ -37,7 +37,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path("", include(router.urls)),
     path("register/", CreateUserAPIView.as_view(), name="register"),
-    path("account/logout/", LogoutView.as_view(), name="logout"),
+    path("logout/", LogoutView.as_view(), name="logout"),
 
     url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

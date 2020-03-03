@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
+from rest_framework.validators import UniqueValidator
 
-from .models import User, Group, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment, \
-    HomeworkInstanceMark
+from .models import (
+    User, Group, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceComment, HomeworkInstanceMark
+)
 
 
 class UserSerializer(serializers.Serializer):
@@ -140,7 +141,7 @@ class LectureSerializer(serializers.ModelSerializer):
 
     def validate_course_name(self, value):
         if Course.objects.filter(title=value).exists():
-            return value  # str
+            return value
         else:
             raise serializers.ValidationError({"course_name": [f"course_name {value} not exists."]})
 
@@ -316,7 +317,7 @@ class HomeworkInstanceCommentSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"detail": ["Access denied. "
                                                               "The auth teacher doesn't have access to this course."]})
 
-    def _get_homework_instance(self):  # without it update-function always wants to get "homework_instance" but this is immutable field
+    def _get_homework_instance(self):
         if "homework_instance" in self.validated_data:
             return self.validated_data["homework_instance"]
         else:
@@ -352,7 +353,7 @@ class HomeworkInstanceMarkSerializer(serializers.ModelSerializer):
         fields = ("id", "mark", "homework_instance")
         extra_kwargs = {"homework_instance": {"required": False}}
 
-    def _get_homework_instance(self):  # without it update-function always wants to get "homework_instance" but this is immutable field
+    def _get_homework_instance(self):
         if "homework_instance" in self.validated_data:
             return self.validated_data["homework_instance"]
         else:

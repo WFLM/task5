@@ -1,3 +1,6 @@
+# Just for READ_ONLY tests. May be deleted without any problems (with forms.py).
+
+
 from django.contrib import admin
 
 from .models import User, Course, Lecture, Homework, HomeworkInstance, HomeworkInstanceMark, HomeworkInstanceComment

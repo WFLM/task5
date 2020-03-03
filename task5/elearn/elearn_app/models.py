@@ -3,15 +3,12 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group
 from django.db import transaction
 
-# User- should be rewritten
-
 
 class UserManager(BaseUserManager):
     def _create_user(self, email, password, **extra_fields):
         """
-        Creates and saves a User with the given email,and password.
+        Creates and saves a User with the given email and password.
         """
-
         if not email:
             raise ValueError('The given email must be set')
         try:
@@ -97,7 +94,6 @@ class HomeworkInstance(models.Model):
 
     file = models.FileField(upload_to="done_homeworks/", null=True)
     is_done = models.BooleanField(default=False)
-    # mark = models.SmallIntegerField(null=True)
 
     def __str__(self):
         return f"Homework: {self.homework.title} by {self.student}"
@@ -122,6 +118,3 @@ class HomeworkInstanceComment(models.Model):
 
     def __str__(self):
         return f"Comment: {self.body} by {self.author}"
-
-
-# from . import groups  # workaround

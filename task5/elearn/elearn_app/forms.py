@@ -1,16 +1,11 @@
 from django.forms import ModelForm, ValidationError
-from django.contrib.auth.models import Group
 from .models import Course
 
 
 class CourseForm(ModelForm):
     class Meta:
         model = Course
-        fields = (
-            "title",
-            "teachers",
-            "students"
-        )
+        fields = ("title", "teachers", "students")
 
     def clean_title(self):
         title = self.cleaned_data["title"]
