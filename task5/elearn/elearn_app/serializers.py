@@ -259,7 +259,7 @@ class HomeworkInstanceSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"homework": ["This field is required."]})
 
     def _unique_together_homework_student_validator(self, homework, student):
-        if HomeworkInstance.objects.filter(homework=homework, student_id=student).exists():
+        if HomeworkInstance.objects.filter(homework=homework, student=student).exists():
             raise serializers.ValidationError({
                 "detail": ["The fields 'homework' and 'student' must be unique together. "
                            "(This homework instance already exists)."],
@@ -300,41 +300,47 @@ class HomeworkInstanceCommentSerializer(serializers.ModelSerializer):
             "created_on": {"read_only": True}
         }
 
-    def _get_author_id(self, homework_instance_id):
+    def _get_author(self, homework_instance):
         user = self.context["request"].user
 
         if user.groups.filter(name="students").exists():
-            if HomeworkInstance.objects.filter(id=homework_instance_id, student_id=user.id).exists():
-                return user.id
+            if homework_instance.student == user:
+                return user
             else:
-                raise serializers.ValidationError({"detail": ["Access denied."]})
+                raise serializers.ValidationError({"detail": ["Access denied. Wrong auth student."]})
 
         elif user.groups.filter(name="teachers").exists():
-            if HomeworkInstance.objects.filter(homework__lecture__course__students__email=user).exists():
-                return user.id
+            if homework_instance.homework.lecture.course.teachers.filter(email=user).exists():
+                return user
             else:
-                raise serializers.ValidationError({"detail": ["Access denied. T"]})
+                raise serializers.ValidationError({"detail": ["Access denied. "
+                                                              "The auth teacher doesn't have access to this course."]})
 
-    def _get_homework_instance_id(self):  # without it update-function always wants to get "homework_instance" but this is immutable field
+    def _get_homework_instance(self):  # without it update-function always wants to get "homework_instance" but this is immutable field
         if "homework_instance" in self.validated_data:
-            return self.validated_data["homework_instance"].id
+            return self.validated_data["homework_instance"]
         else:
             raise serializers.ValidationError({"homework_instance": ["This field is required."]})
 
     def create(self, validated_data):
 
-        homework_instance_id = self._get_homework_instance_id()
-        author_id = self._get_author_id(homework_instance_id)
+        homework_instance = self._get_homework_instance()
+        author = self._get_author(homework_instance)
 
         homework_instance_comment = HomeworkInstanceComment(
-            homework_instance_id=homework_instance_id,
-            author_id=author_id,
+            homework_instance=homework_instance,
+            author=author,
             body=validated_data["body"]
         )
         homework_instance_comment.save()
         return homework_instance_comment
 
     def update(self, instance, validated_data):
+        homework_instance = instance.homework_instance
+        author = self._get_author(homework_instance)
+        if author != instance.author:
+            raise serializers.ValidationError({"detail": ["Access denied. "
+                                                          "You cannot change other people's comments."]})
         instance.body = validated_data.get("body", instance.body)
         instance.save()
         return instance
