@@ -5,6 +5,27 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 
+Group = apps.get_model("auth", "Group")
+
+
+def forwards_groups(apps, schema_editor):
+    Group = apps.get_model("auth", "Group")
+    db_alias = schema_editor.connection.alias
+
+    Group.objects.using(db_alias).bulk_create([
+        Group(name="superusers"),
+        Group(name="teachers"),
+        Group(name="students")
+    ])
+
+
+def reverse_groups(apps, schema_editor):
+    Group = apps.get_model("auth", "Group")
+    db_alias = schema_editor.connection.alias
+
+    Group.objects.using(db_alias).filter(name="superusers").delete()
+    Group.objects.using(db_alias).filter(name="teachers").delete()
+    Group.objects.using(db_alias).filter(name="students").delete()
 
 
 class Migration(migrations.Migration):
@@ -15,14 +36,8 @@ class Migration(migrations.Migration):
         ('auth', '0011_update_proxy_permissions'),
     ]
 
-    Group = apps.get_model("auth", "Group")
-
-    def create_groups(self):
-        for group in ("superusers", "teachers", "students"):
-            self.Group.objects.get_or_create(name=group)
-
     operations = [
-        migrations.RunPython(create_groups),
+        migrations.RunPython(forwards_groups, reverse_groups),
 
         migrations.CreateModel(
             name='User',
@@ -44,6 +59,7 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
+
         migrations.CreateModel(
             name='Course',
             fields=[

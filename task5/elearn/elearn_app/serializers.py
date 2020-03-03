@@ -19,12 +19,10 @@ class UserSerializer(serializers.Serializer):
 
     user_group = serializers.SerializerMethodField()   # To get "group" in serializer.data then.
 
-    _GROUP_NAMES = tuple(str(group) for group in Group.objects.all())
-
     def validate_group(self, value):
         if value == "superusers":
             raise serializers.ValidationError({"detail": ["Superuser cannot be created this way."]})
-        elif value not in self._GROUP_NAMES:
+        elif value not in {"teachers", "students"}:
             raise serializers.ValidationError({"group": [f"Group {value} not exists."]})
         else:
             return value
